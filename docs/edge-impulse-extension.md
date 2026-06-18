@@ -13,8 +13,9 @@ what the extension does.
 
 When opened from inside Edge Impulse Studio for a given sample, the extension:
 
-1. Receives the project id, category, and sample id (and, on first connect, an
-   API key) via URL parameters — see [URL parameters](./url-parameters.md).
+1. Receives the category and sample id (and, on first connect, an API key) via
+   URL parameters — see [URL parameters](./url-parameters.md). The project is
+   resolved automatically from the project-scoped API key.
 2. Validates the API key server-side and stores it in the httpOnly `ei_session`
    cookie, then strips the key from the address bar.
 3. Loads the sample's time-series through the same-origin proxy
@@ -42,13 +43,12 @@ The host (Studio or your own launcher) links to the deployed app with query
 parameters. The general shape:
 
 ```
-https://dash.jennyspeelman.dev/?apiKey=<ei_…>&project=<id>&category=<training|testing|anomaly>&sample=<id>&embed=1
+https://dash.jennyspeelman.dev/?apiKey=<ei_…>&category=<training|testing|anomaly>&sample=<id>&embed=1
 ```
 
 | Part | Purpose |
 | --- | --- |
-| `apiKey=ei_…` | API key. Validated, moved into the `ei_session` cookie, then stripped from the URL. Optional once a session cookie already exists. |
-| `project=<id>` | Project id to open (aliases `eiProject` / `projectId`). |
+| `apiKey=ei_…` | API key. Validated, moved into the `ei_session` cookie, then stripped from the URL. Optional once a session cookie already exists. The project is resolved from the key. |
 | `category=…` | Dataset bucket the sample lives in. |
 | `sample=<id>` | Sample to auto-open (alias `sampleId`). |
 | `view=stacked\|overlay` | Optional figure layout (default `stacked`). |
@@ -61,7 +61,7 @@ https://dash.jennyspeelman.dev/?apiKey=<ei_…>&project=<id>&category=<training|
 Once the session cookie is set, subsequent links can omit `apiKey`:
 
 ```
-https://dash.jennyspeelman.dev/?project=12345&category=training&sample=98765&embed=1
+https://dash.jennyspeelman.dev/?category=training&sample=98765&embed=1
 ```
 
 ---
@@ -70,7 +70,7 @@ https://dash.jennyspeelman.dev/?project=12345&category=training&sample=98765&emb
 
 ```html
 <iframe
-  src="https://dash.jennyspeelman.dev/?project=12345&category=training&sample=98765&embed=1&theme=dark"
+  src="https://dash.jennyspeelman.dev/?category=training&sample=98765&embed=1&theme=dark"
   title="Edge Impulse · Plotly Dash"
   style="width: 100%; height: 100%; border: 0;"
   allow="clipboard-write"

@@ -50,7 +50,6 @@ export function Dashboard() {
   const [embed, setEmbed] = React.useState(false);
 
   const [connected, setConnected] = React.useState(false);
-  const [projectId, setProjectId] = React.useState<number | undefined>();
   const [projectName, setProjectName] = React.useState<string | undefined>();
   const [connecting, setConnecting] = React.useState(false);
   const [connectError, setConnectError] = React.useState<string | undefined>();
@@ -93,14 +92,12 @@ export function Dashboard() {
           setConnecting(true);
           const res = await ei.connectSession({
             apiKey: p.apiKey,
-            projectId: p.project,
             studioHost: p.studioHost,
             ingestionHost: p.ingestionHost,
           });
           stripSecretParams();
           if (res.success) {
             setConnected(true);
-            setProjectId(res.projectId);
             setProjectName(res.projectName);
           } else {
             setConnectError(res.error);
@@ -110,7 +107,6 @@ export function Dashboard() {
           const st = await ei.getSessionStatus();
           if (st.connected) {
             setConnected(true);
-            setProjectId(st.projectId);
             setProjectName(st.projectName);
           }
         }
@@ -216,27 +212,23 @@ export function Dashboard() {
     });
   }, []);
 
-  const handleConnect = React.useCallback(
-    async (apiKey: string, pid?: number) => {
-      setConnecting(true);
-      setConnectError(undefined);
-      try {
-        const res = await ei.connectSession({ apiKey, projectId: pid });
-        if (res.success) {
-          setConnected(true);
-          setProjectId(res.projectId);
-          setProjectName(res.projectName);
-        } else {
-          setConnectError(res.error ?? "Failed to connect");
-        }
-      } catch (e) {
-        setConnectError(e instanceof Error ? e.message : "Failed to connect");
-      } finally {
-        setConnecting(false);
+  const handleConnect = React.useCallback(async (apiKey: string) => {
+    setConnecting(true);
+    setConnectError(undefined);
+    try {
+      const res = await ei.connectSession({ apiKey });
+      if (res.success) {
+        setConnected(true);
+        setProjectName(res.projectName);
+      } else {
+        setConnectError(res.error ?? "Failed to connect");
       }
-    },
-    [],
-  );
+    } catch (e) {
+      setConnectError(e instanceof Error ? e.message : "Failed to connect");
+    } finally {
+      setConnecting(false);
+    }
+  }, []);
 
   const handleDisconnect = React.useCallback(async () => {
     try {
@@ -245,7 +237,6 @@ export function Dashboard() {
       // ignore
     }
     setConnected(false);
-    setProjectId(undefined);
     setProjectName(undefined);
     setSamples([]);
     setSelectedSampleId(null);
@@ -302,7 +293,6 @@ export function Dashboard() {
         <AppHeader
           connected={connected}
           projectName={projectName}
-          projectId={projectId}
           theme={theme}
           onToggleTheme={toggleTheme}
           onDisconnect={handleDisconnect}

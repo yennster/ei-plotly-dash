@@ -12,19 +12,17 @@ export function ConnectPanel({
   error,
   onImportCsv,
 }: {
-  onConnect: (apiKey: string, projectId?: number) => void;
+  onConnect: (apiKey: string) => void;
   connecting: boolean;
   error?: string;
   onImportCsv: (file: File) => void;
 }) {
   const [apiKey, setApiKey] = React.useState("");
-  const [projectId, setProjectId] = React.useState("");
   const fileRef = React.useRef<HTMLInputElement | null>(null);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const pid = projectId.trim() ? Number(projectId.trim()) : undefined;
-    onConnect(apiKey.trim(), Number.isFinite(pid) ? pid : undefined);
+    onConnect(apiKey.trim());
   };
 
   return (
@@ -58,18 +56,6 @@ export function ConnectPanel({
                 spellCheck={false}
               />
             </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-fg-muted">
-              Project ID <span className="text-fg-muted/70">(optional)</span>
-            </label>
-            <Input
-              value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
-              placeholder="Defaults to the key's first project"
-              inputMode="numeric"
-            />
           </div>
 
           {error && (

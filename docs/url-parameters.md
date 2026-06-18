@@ -14,8 +14,7 @@ There is also an in-app version of this page at
 
 | Parameter | Aliases | Type | Default | Description |
 | --- | --- | --- | --- | --- |
-| `apiKey` | | string `ei_…` | — | Edge Impulse API key. Validated, moved into the httpOnly `ei_session` cookie, then stripped from the URL. Only accepted when it starts with `ei_`. |
-| `project` | `eiProject`, `projectId` | integer ≥ 1 | first project | Project id to open. Defaults to the key's first project. |
+| `apiKey` | | string `ei_…` | — | Edge Impulse API key. Validated, moved into the httpOnly `ei_session` cookie, then stripped from the URL. Only accepted when it starts with `ei_`. The project is resolved automatically from the (project-scoped) key. |
 | `category` | | enum | `training` | Dataset bucket: `training`, `testing`, or `anomaly`. |
 | `labels` | | comma list | — | Filter the sample list to these labels, e.g. `labels=idle,walk,run`. |
 | `sample` | `sampleId` | integer ≥ 1 | — | Sample id to auto-open on load. |
@@ -58,7 +57,7 @@ Filter by label, larger page size:
 Embedded, dark theme to match Studio:
 
 ```
-/?project=12345&category=training&sample=98765&embed=1&theme=dark
+/?category=training&sample=98765&embed=1&theme=dark
 ```
 
 ## Inherited parameters (embedded mode)

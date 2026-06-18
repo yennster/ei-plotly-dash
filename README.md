@@ -53,8 +53,7 @@ at [`/url-parameters`](https://dash.jennyspeelman.dev/url-parameters) and in
 
 | Parameter | Type | Default | Purpose |
 | --- | --- | --- | --- |
-| `apiKey` | `ei_…` | — | API key. Validated, moved to the httpOnly cookie, then **stripped from the URL**. |
-| `project` / `eiProject` / `projectId` | int | first project | Project id to open. |
+| `apiKey` | `ei_…` | — | API key (project-scoped). Validated, moved to the httpOnly cookie, then **stripped from the URL**. The project is resolved from the key. |
 | `category` | enum | `training` | `training` \| `testing` \| `anomaly`. |
 | `labels` | comma list | — | Filter the sample list, e.g. `idle,walk,run`. |
 | `sample` / `sampleId` | int | — | Sample id to auto-open on load. |
@@ -80,7 +79,7 @@ from the app's own URL so it can be stripped after load.
 
 ```html
 <iframe
-  src="https://dash.jennyspeelman.dev/?project=12345&category=training&sample=98765&embed=1&theme=dark"
+  src="https://dash.jennyspeelman.dev/?category=training&sample=98765&embed=1&theme=dark"
   title="Edge Impulse · Plotly Dash"
   style="width: 100%; height: 100%; border: 0;"
   allow="clipboard-write"

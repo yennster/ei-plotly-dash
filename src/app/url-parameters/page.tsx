@@ -24,13 +24,6 @@ const PARAMS: Param[] = [
     desc: "Edge Impulse API key. Validated, moved into the httpOnly ei_session cookie, then stripped from the URL. Only accepted when it starts with ei_.",
   },
   {
-    name: "project",
-    alias: "eiProject / projectId",
-    type: "integer ≥ 1",
-    def: "—",
-    desc: "Project id to open. Optional — defaults to the API key's first project when omitted.",
-  },
-  {
     name: "category",
     type: "enum",
     def: "training",

@@ -11,14 +11,12 @@ const GITHUB_URL = "https://github.com/yennster/ei-plotly-dash";
 export function AppHeader({
   connected,
   projectName,
-  projectId,
   theme,
   onToggleTheme,
   onDisconnect,
 }: {
   connected: boolean;
   projectName?: string;
-  projectId?: number;
   theme: Theme;
   onToggleTheme: () => void;
   onDisconnect: () => void;
@@ -55,11 +53,7 @@ export function AppHeader({
                 connected ? "bg-accent" : "bg-fg-muted",
               )}
             />
-            {connected
-              ? projectName
-                ? `${projectName} · #${projectId}`
-                : `Project #${projectId}`
-              : "Not connected"}
+            {connected ? (projectName ?? "Connected") : "Not connected"}
           </span>
         </div>
 

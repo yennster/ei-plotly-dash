@@ -42,7 +42,6 @@ export function colorForIndex(i: number): string {
 export interface ConnectResult {
   success: boolean;
   error?: string;
-  projectId?: number;
   projectName?: string;
   studioHost?: string;
 }
@@ -50,7 +49,6 @@ export interface ConnectResult {
 export interface SessionStatus {
   success: true;
   connected: boolean;
-  projectId?: number;
   projectName?: string;
   studioHost?: string;
 }
@@ -107,15 +105,14 @@ async function rawJson(
 
 export interface ConnectInput {
   apiKey: string;
-  projectId?: number;
   studioHost?: string;
   ingestionHost?: string;
 }
 
 /**
- * Validate + persist a session (POST /api/ei/session). Does NOT throw on a
- * rejected key/project — returns `{ success:false, error }` so the caller can
- * surface the message inline.
+ * Validate + persist a session (POST /api/ei/session). The project is resolved
+ * server-side from the (project-scoped) API key. Does NOT throw on a rejected
+ * key — returns `{ success:false, error }` so the caller can surface it inline.
  */
 export async function connectSession(input: ConnectInput): Promise<ConnectResult> {
   const { body } = await rawJson("/api/ei/session", {
@@ -127,7 +124,6 @@ export async function connectSession(input: ConnectInput): Promise<ConnectResult
   return {
     success: env.success === true,
     error: typeof env.error === "string" ? env.error : undefined,
-    projectId: typeof env.projectId === "number" ? env.projectId : undefined,
     projectName: typeof env.projectName === "string" ? env.projectName : undefined,
     studioHost: typeof env.studioHost === "string" ? env.studioHost : undefined,
   };

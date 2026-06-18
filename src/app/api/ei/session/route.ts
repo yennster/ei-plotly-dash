@@ -1,6 +1,9 @@
 // src/app/api/ei/session/route.ts — connect / status / disconnect.
 //
-// POST   validates the apiKey by fetching project info, then sets the httpOnly
+// An Edge Impulse API key is project-scoped, so the project is resolved from the
+// key itself — the user never supplies a project id.
+//
+// POST   validates the apiKey, resolves its project, then sets the httpOnly
 //        `ei_session` cookie (sameSite:"none", secure, path:"/").
 // GET    returns connection status WITHOUT exposing the apiKey.
 // DELETE clears the cookie.
@@ -22,7 +25,6 @@ export const dynamic = "force-dynamic";
 
 interface ConnectBody {
   apiKey?: string;
-  projectId?: number | string;
   studioHost?: string;
   ingestionHost?: string;
 }
@@ -66,74 +68,44 @@ export async function POST(req: Request): Promise<NextResponse> {
     );
   }
 
-  const rawProjectId =
-    typeof body.projectId === "string" ? Number(body.projectId) : body.projectId;
-  const projectId =
-    typeof rawProjectId === "number" && Number.isFinite(rawProjectId)
-      ? Math.trunc(rawProjectId)
-      : undefined;
-
   const studioHost = normalizeHost(body.studioHost);
   const ingestionHost = normalizeHost(body.ingestionHost);
 
   // Build a provisional session to validate against the Studio API.
   const provisional: EISession = {
     apiKey,
-    projectId: projectId ?? 0,
+    projectId: 0,
     studioHost,
     ingestionHost,
   };
 
   try {
-    let resolvedProjectId = projectId;
-    let projectName: string | undefined;
-
-    if (projectId && projectId >= 1) {
-      // Validate the explicit project id.
-      const info = await studioFetch<EIProjectInfoResponse>(
-        provisional,
-        `/${projectId}/`,
-      );
-      resolvedProjectId = info.project?.id ?? projectId;
-      projectName = info.project?.name;
-    } else {
-      // No project id provided — resolve it from the key's project list.
-      const listed = await studioFetch<{
-        success: boolean;
-        projects?: { id: number; name?: string }[];
-      }>(provisional, `/projects`);
-      const first = listed.projects?.[0];
-      if (!first) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "No Edge Impulse projects are accessible with this API key",
-          },
-          { status: 400 },
-        );
-      }
-      resolvedProjectId = first.id;
-      projectName = first.name;
-    }
-
-    if (!resolvedProjectId || resolvedProjectId < 1) {
+    // The key is project-scoped: resolve its project from the key's list.
+    const listed = await studioFetch<{
+      success: boolean;
+      projects?: { id: number; name?: string }[];
+    }>(provisional, `/projects`);
+    const project = listed.projects?.[0];
+    if (!project || !project.id || project.id < 1) {
       return NextResponse.json(
-        { success: false, error: "Could not resolve a project id" },
+        {
+          success: false,
+          error: "No Edge Impulse project is accessible with this API key",
+        },
         { status: 400 },
       );
     }
 
     const session: EISession = {
       apiKey,
-      projectId: resolvedProjectId,
+      projectId: project.id,
       studioHost,
       ingestionHost,
     };
 
     const res = NextResponse.json({
       success: true,
-      projectId: resolvedProjectId,
-      projectName,
+      projectName: project.name,
       studioHost: studioBase(session),
     });
     res.cookies.set(SESSION_COOKIE, serializeSession(session), COOKIE_BASE);
@@ -165,7 +137,6 @@ export async function GET(): Promise<NextResponse> {
   return NextResponse.json({
     success: true,
     connected: true,
-    projectId: session.projectId,
     projectName,
     studioHost: studioBase(session),
   });
