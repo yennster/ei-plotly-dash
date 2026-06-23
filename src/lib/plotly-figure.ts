@@ -12,7 +12,7 @@
 
 import type { Data, Layout } from "plotly.js";
 import type { Dataset, Theme, ViewMode } from "@/lib/types";
-import { buildXAxis, decimate } from "@/lib/timeseries";
+import { buildXAxis, decimate, type XAxis } from "@/lib/timeseries";
 
 export interface FigureOptions {
   view: ViewMode;
@@ -42,8 +42,79 @@ const THEMES: Record<Theme, ThemePalette> = {
 /** Max points rendered per trace (decimated for interactivity). */
 const MAX_POINTS = 6000;
 
+/** Translucent fill so label bands sit behind the traces without hiding them. */
+const BAND_OPACITY = 0.12;
+/** Max bands to tag inline; above this we rely on the legend chips only. */
+const MAX_BAND_TAGS = 12;
+
 function axisLabel(name: string, units?: string): string {
   return units ? `${name} (${units})` : name;
+}
+
+/** "#3b82f6" → "rgba(59,130,246,a)". Returns the input unchanged if not 6-hex. */
+function hexToRgba(hex: string, alpha: number): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return hex;
+  const int = parseInt(m[1], 16);
+  const r = (int >> 16) & 255;
+  const g = (int >> 8) & 255;
+  const b = int & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+interface LabelDecor {
+  shapes: Record<string, unknown>[];
+  annotations: Record<string, unknown>[];
+}
+
+/**
+ * Build the shaded multi-label regions (full-height bands across every subplot)
+ * plus optional inline tags. Bands are indexed in ORIGINAL sample resolution and
+ * mapped through `ax.dtX`, so they stay aligned even when the payload was
+ * downsampled. Returns null when the dataset is single-label.
+ */
+function labelDecor(ds: Dataset, ax: XAxis, tagBg: string): LabelDecor | null {
+  const segs = ds.labelSegments;
+  if (!segs || segs.length === 0) return null;
+
+  const shapes: Record<string, unknown>[] = [];
+  const annotations: Record<string, unknown>[] = [];
+  const tag = segs.length <= MAX_BAND_TAGS;
+
+  for (const s of segs) {
+    // endIndex is inclusive, so the band reaches the start of the next index.
+    const x0 = s.startIndex * ax.dtX;
+    const x1 = (s.endIndex + 1) * ax.dtX;
+    shapes.push({
+      type: "rect",
+      xref: "x",
+      yref: "paper",
+      x0,
+      x1,
+      y0: 0,
+      y1: 1,
+      fillcolor: hexToRgba(s.color, BAND_OPACITY),
+      line: { width: 0 },
+      layer: "below",
+    });
+    if (tag) {
+      annotations.push({
+        xref: "x",
+        yref: "paper",
+        x: (x0 + x1) / 2,
+        y: 1,
+        yanchor: "top",
+        text: s.label,
+        showarrow: false,
+        font: { color: s.color, size: 11 },
+        bgcolor: tagBg,
+        borderpad: 1,
+        captureevents: false,
+      });
+    }
+  }
+
+  return { shapes, annotations };
 }
 
 export function buildFigure(ds: Dataset, opts: FigureOptions): Figure {
@@ -80,6 +151,16 @@ export function buildFigure(ds: Dataset, opts: FigureOptions): Figure {
     },
     hovermode: opts.view === "overlay" ? "x unified" : "closest",
   };
+
+  // Multi-label bands sit behind every layout (drawn under the traces). Computed
+  // once from the dataset + x-axis so all return paths render them.
+  const tagBg =
+    opts.theme === "dark" ? "rgba(15,23,42,0.6)" : "rgba(255,255,255,0.6)";
+  const decor = labelDecor(ds, ax, tagBg);
+  if (decor) {
+    layout.shapes = decor.shapes;
+    layout.annotations = decor.annotations;
+  }
 
   // Nothing selected → return empty axes so the chart frame still renders.
   if (chans.length === 0) {

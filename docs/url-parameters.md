@@ -23,6 +23,7 @@ There is also an in-app version of this page at
 | `rangeslider` | `slider` | boolean | `true` | Show the Plotly range slider under the time axis. |
 | `limit` | | integer 1–1000 | `200` | Page size for the sample list. |
 | `offset` | | integer ≥ 0 | `0` | Page offset for the sample list. |
+| `maxPoints` | `points` | integer 500–50000 | `8000` | Per-sample payload cap. Samples longer than this are downsampled server-side (Studio `limitPayloadValues`) so very large samples stay fast to load; the true length and full-duration time axis are preserved. |
 | `theme` | | enum | `light` | Force the UI theme: `light` or `dark`. |
 | `embed` | | boolean | `false` | Strip the page header for iframe embedding; keep the controls and plot. |
 | `studioHost` | | URL | `studio.edgeimpulse.com` | Override the Studio API base. https + host-allowlisted. |
@@ -52,6 +53,12 @@ Filter by label, larger page size:
 
 ```
 /?category=testing&labels=idle,walk,run&limit=500
+```
+
+Cap a very large sample to ~4000 points for a faster load:
+
+```
+/?sample=98765&maxPoints=4000
 ```
 
 Embedded, dark theme to match Studio:
