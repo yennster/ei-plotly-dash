@@ -11,8 +11,18 @@ import type { NextConfig } from "next";
  * user content or vulnerable to subdomain takeover — frame the app and drive a
  * connect with attacker-chosen params. To embed under another known Studio
  * origin, add it explicitly here.
+ *
+ * In development we additionally allow localhost origins so the app can be
+ * embedded in a local harness during testing. These are NOT added in
+ * production, so the deployed policy stays locked to Studio.
  */
-const FRAME_ANCESTORS = ["'self'", "https://studio.edgeimpulse.com"].join(" ");
+const isDev = process.env.NODE_ENV !== "production";
+
+const FRAME_ANCESTORS = [
+  "'self'",
+  "https://studio.edgeimpulse.com",
+  ...(isDev ? ["http://localhost:*", "http://127.0.0.1:*"] : []),
+].join(" ");
 
 const nextConfig: NextConfig = {
   async headers() {

@@ -83,6 +83,11 @@ This is the modern replacement for `X-Frame-Options`. The app intentionally does
 **not** send `X-Frame-Options: DENY`. To embed in a **different** host, add that
 origin to the `FRAME_ANCESTORS` list in `next.config.ts` and redeploy.
 
+In **development** (`NODE_ENV !== "production"`), `http://localhost:*` and
+`http://127.0.0.1:*` are also allowed so the app can be framed by a local
+harness while testing. These dev-only origins are dropped from the production
+build, so the deployed policy stays scoped to `'self'` and Studio.
+
 ### Cross-site cookie (`sameSite: "none"`, partitioned)
 
 `/api/ei/session` sets the cookie with:
