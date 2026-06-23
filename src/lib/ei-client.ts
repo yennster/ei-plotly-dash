@@ -13,6 +13,8 @@ import type {
   EICategory,
   EISampleMeta,
   EISamplePayload,
+  EIStructuredLabel,
+  LabelSegment,
 } from "@/lib/types";
 
 // ---- color palette --------------------------------------------------------
@@ -35,6 +37,14 @@ export const PALETTE: readonly string[] = [
 
 export function colorForIndex(i: number): string {
   return PALETTE[((i % PALETTE.length) + PALETTE.length) % PALETTE.length];
+}
+
+/**
+ * Color for a multi-label band. Offset into the palette so a label's band does
+ * not collide with channel 0's line color (channels start at index 0).
+ */
+export function colorForLabel(i: number): string {
+  return colorForIndex(i + 4);
 }
 
 // ---- response shapes from our own routes ----------------------------------
@@ -181,18 +191,34 @@ export interface GetSampleResult {
   totalPayloadLength: number;
 }
 
-/** Load one sample's full payload (GET /api/ei/sample/{id}). */
-export async function getSample(sampleId: number): Promise<GetSampleResult> {
+/**
+ * Load one sample's full payload (GET /api/ei/sample/{id}). `maxPoints` caps the
+ * payload server-side (Studio `limitPayloadValues`) for large samples.
+ */
+export async function getSample(
+  sampleId: number,
+  maxPoints?: number,
+): Promise<GetSampleResult> {
+  const q =
+    typeof maxPoints === "number" && Number.isFinite(maxPoints)
+      ? `?points=${Math.trunc(maxPoints)}`
+      : "";
   return requestJson<GetSampleResult>(
-    `/api/ei/sample/${encodeURIComponent(String(sampleId))}`,
+    `/api/ei/sample/${encodeURIComponent(String(sampleId))}${q}`,
     { method: "GET" },
   );
 }
 
 /** Load a sample by id and return a ready-to-plot Dataset. */
-export async function loadSample(sampleId: number): Promise<Dataset> {
-  const { sample, payload } = await getSample(sampleId);
-  return datasetFromSample(sample, payload);
+export async function loadSample(
+  sampleId: number,
+  maxPoints?: number,
+): Promise<Dataset> {
+  const { sample, payload, totalPayloadLength } = await getSample(
+    sampleId,
+    maxPoints,
+  );
+  return datasetFromSample(sample, payload, totalPayloadLength);
 }
 
 // ---- payload -> Dataset conversion ----------------------------------------
@@ -219,16 +245,61 @@ export function channelsFromPayload(payload: EISamplePayload): Channel[] {
   });
 }
 
+/**
+ * Resolve a sample's structured labels into colored segments. Returns undefined
+ * for single-label samples (fewer than two runs), so the chart stays clean.
+ * Each distinct label gets a stable color; runs are sorted by start index.
+ */
+export function labelSegmentsFromSample(
+  structuredLabels: EIStructuredLabel[] | undefined,
+): { segments: LabelSegment[]; labels: string[] } | undefined {
+  if (!structuredLabels || structuredLabels.length < 2) return undefined;
+
+  const colorByLabel = new Map<string, string>();
+  const labels: string[] = [];
+  for (const s of structuredLabels) {
+    if (!colorByLabel.has(s.label)) {
+      colorByLabel.set(s.label, colorForLabel(colorByLabel.size));
+      labels.push(s.label);
+    }
+  }
+
+  const segments = structuredLabels
+    .filter((s) => Number.isFinite(s.startIndex) && Number.isFinite(s.endIndex))
+    .map((s) => ({
+      label: s.label,
+      startIndex: s.startIndex,
+      endIndex: s.endIndex,
+      color: colorByLabel.get(s.label)!,
+    }))
+    .sort((a, b) => a.startIndex - b.startIndex);
+
+  return { segments, labels };
+}
+
 /** Build a complete Dataset from a loaded EI sample. */
 export function datasetFromSample(
   sample: EISampleMeta,
   payload: EISamplePayload,
+  totalPayloadLength?: number,
 ): Dataset {
   const channels = channelsFromPayload(payload);
   const intervalMs = payload.intervalMs ?? sample.intervalMs ?? undefined;
   const frequencyHz =
     payload.frequencyHz ??
     (sample.frequency && sample.frequency > 0 ? sample.frequency : undefined);
+
+  // True reading count, even when the payload was capped server-side. Prefer the
+  // explicit totalPayloadLength; fall back to the metadata count, then to what we
+  // actually received.
+  const loadedLength = channels.reduce((m, c) => Math.max(m, c.values.length), 0);
+  const totalLength = Math.max(
+    loadedLength,
+    totalPayloadLength ?? 0,
+    sample.valuesCount ?? 0,
+  );
+
+  const labelInfo = labelSegmentsFromSample(sample.structuredLabels);
 
   return {
     channels,
@@ -239,5 +310,9 @@ export function datasetFromSample(
     label: sample.label,
     category: sample.category,
     sampleId: sample.id,
+    labelSegments: labelInfo?.segments,
+    labelList: labelInfo?.labels,
+    totalLength,
+    downsampled: totalLength > loadedLength,
   };
 }

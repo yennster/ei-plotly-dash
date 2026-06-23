@@ -32,6 +32,12 @@ This dashboard fixes that with Plotly's full interactive plotting:
 - **Reactive controls** (the Dash idea) — category, label filter, sample
   picker, per-channel show/hide, layout, and the range-slider toggle all update
   the figure live.
+- **Multi-label samples** — Edge Impulse structured labels are drawn as shaded,
+  full-height time regions behind every channel (one color per label, with
+  inline tags), so you can see exactly which span is `idle` vs `walk` vs `run`.
+- **Fast large-sample loads** — long samples are downsampled server-side via the
+  Studio payload cap, so a 100k-reading sample loads quickly while still
+  spanning its true duration (the cap is tunable with `maxPoints`).
 - **Summary stats** — per-channel min / max / mean / std / RMS, plus sample
   rate and duration, derived on the client.
 - **Standalone CSV import** — drop in a local CSV (first column = time/index,
@@ -61,6 +67,7 @@ at [`/url-parameters`](https://dash.jennyspeelman.dev/url-parameters) and in
 | `view` | enum | `stacked` | `stacked` (per-channel subplots) \| `overlay`. |
 | `rangeslider` / `slider` | bool | `true` | Show the Plotly range slider. |
 | `limit` / `offset` | int | `200` / `0` | Sample-list paging. |
+| `maxPoints` / `points` | int | `8000` | Per-sample payload cap; larger samples are downsampled server-side. |
 | `theme` | enum | `light` | `light` \| `dark`. |
 | `embed` | bool | `false` | Hide the page header for iframe embedding. |
 | `studioHost` / `ingestionHost` | URL | EI cloud | Self-hosted / enterprise API bases (host-allowlisted). |

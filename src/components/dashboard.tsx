@@ -185,7 +185,7 @@ export function Dashboard() {
     let cancelled = false;
     setDatasetLoading(true);
     setDatasetError(undefined);
-    ei.loadSample(selectedSampleId)
+    ei.loadSample(selectedSampleId, paramsRef.current?.maxPoints)
       .then((ds) => {
         if (cancelled) return;
         setDataset(ds);

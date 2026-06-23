@@ -115,12 +115,20 @@ export function ControlsPanel(props: ControlsPanelProps) {
                   {props.samplesLoading ? "Loading…" : "No samples"}
                 </option>
               )}
-              {props.samples.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.label ? `${s.label} · ` : ""}
-                  {s.filename || `sample-${s.id}`} (#{s.id})
-                </option>
-              ))}
+              {props.samples.map((s) => {
+                const multi = s.structuredLabelsList?.length
+                  ? s.structuredLabelsList
+                  : null;
+                const labelText = multi
+                  ? `${multi.slice(0, 3).join("/")}${multi.length > 3 ? "…" : ""}`
+                  : s.label;
+                return (
+                  <option key={s.id} value={s.id}>
+                    {labelText ? `${labelText} · ` : ""}
+                    {s.filename || `sample-${s.id}`} (#{s.id})
+                  </option>
+                );
+              })}
             </Select>
           </Section>
         </>

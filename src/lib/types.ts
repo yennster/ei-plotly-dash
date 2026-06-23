@@ -30,6 +30,19 @@ export interface Channel {
 }
 
 /**
+ * A contiguous run of one label inside a multi-label sample, resolved to a
+ * concrete color for rendering. `startIndex`/`endIndex` are ORIGINAL
+ * full-resolution sample indices (endIndex inclusive), so they stay correct
+ * even when the payload was server-side downsampled (see Dataset.totalLength).
+ */
+export interface LabelSegment {
+  label: string;
+  startIndex: number;
+  endIndex: number;
+  color: HexColor;
+}
+
+/**
  * A loaded time-series document. `time` is the explicit x-axis (seconds); when
  * absent the x-axis is derived from intervalMs / frequencyHz, or a 0..n-1 index.
  */
@@ -43,6 +56,18 @@ export interface Dataset {
   label?: string;
   category?: EICategory;
   sampleId?: number;
+  /** Time-segmented labels (multi-label samples); undefined when single-label. */
+  labelSegments?: LabelSegment[];
+  /** Distinct labels present, in first-seen order (for legends / pickers). */
+  labelList?: string[];
+  /**
+   * True number of readings in the source sample. Differs from the channel
+   * length only when the payload was downsampled server-side
+   * (limitPayloadValues); used to reconstruct the true-duration x-axis.
+   */
+  totalLength?: number;
+  /** True when the loaded payload was downsampled (totalLength > channel length). */
+  downsampled?: boolean;
 }
 
 /** Server-side session, persisted only in the httpOnly `ei_session` cookie. */
@@ -61,6 +86,17 @@ export interface EIEnvelope {
   error?: string;
 }
 
+/**
+ * One label run inside a multi-label sample, as returned by Studio.
+ * `endIndex` is INCLUSIVE: `{ startIndex: 0, endIndex: 3 }` covers 0,1,2,3.
+ * Multiply an index by the sample's `intervalMs` to get a time code.
+ */
+export interface EIStructuredLabel {
+  startIndex: number;
+  endIndex: number;
+  label: string;
+}
+
 /** A row in GET /{projectId}/raw-data (sample list metadata). */
 export interface EISampleMeta {
   id: number;
@@ -72,6 +108,10 @@ export interface EISampleMeta {
   intervalMs?: number;
   totalLengthMs?: number;
   valuesCount?: number;
+  /** Time-segmented labels; present on multi-label samples. */
+  structuredLabels?: EIStructuredLabel[];
+  /** Distinct labels present on a multi-label sample. */
+  structuredLabelsList?: string[];
 }
 
 /** payload object from GET /{projectId}/raw-data/{sampleId}. */
@@ -103,6 +143,7 @@ export interface AppParams {
   rangeslider: boolean; // show the Plotly range slider (default true)
   limit: number; // 1..1000, default 200
   offset: number; // >= 0, default 0
+  maxPoints: number; // per-sample payload cap (limitPayloadValues), 500..50000
   theme?: Theme;
   embed: boolean; // hides chrome inside iframe
   studioHost?: string;

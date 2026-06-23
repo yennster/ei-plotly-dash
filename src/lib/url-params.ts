@@ -57,6 +57,16 @@ const CATEGORIES = ["training", "testing", "anomaly"] as const;
 const THEMES = ["dark", "light"] as const;
 const VIEWS = ["overlay", "stacked"] as const;
 
+/**
+ * Default per-sample payload cap (Studio `limitPayloadValues`). Samples longer
+ * than this are downsampled server-side so very large samples stay fast to
+ * fetch and parse. The figure decimates further for rendering, so this only
+ * needs headroom over the render budget.
+ */
+export const DEFAULT_MAX_POINTS = 8000;
+const MIN_MAX_POINTS = 500;
+const MAX_MAX_POINTS = 50000;
+
 /** Read a param trying each candidate key in order. */
 function pick(params: URLSearchParams, ...keys: string[]): string | null {
   for (const k of keys) {
@@ -78,6 +88,7 @@ export function parseParams(
   const out: AppParams = {
     limit: 200,
     offset: 0,
+    maxPoints: DEFAULT_MAX_POINTS,
     embed: false,
     view: "stacked",
     rangeslider: true,
@@ -118,6 +129,11 @@ export function parseParams(
   // offset >= 0 (default 0)
   const offset = parseIntStrict(pick(params, "offset"));
   if (offset != null) out.offset = Math.max(0, offset);
+
+  // maxPoints (alias points) — per-sample payload cap, clamped
+  const maxPoints = parseIntStrict(pick(params, "maxPoints", "points"));
+  if (maxPoints != null)
+    out.maxPoints = clamp(maxPoints, MIN_MAX_POINTS, MAX_MAX_POINTS);
 
   // theme
   const theme = parseEnum<Theme>(pick(params, "theme"), THEMES);
