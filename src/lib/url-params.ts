@@ -164,12 +164,11 @@ function toSearchParams(
 /**
  * Params that must NEVER be inherited from a parent frame or the referrer.
  *
- * The apiKey is a secret. We can only scrub it from our OWN address bar
- * (history.replaceState); we cannot touch the parent page's URL/history/Referer.
- * If we accepted an inherited apiKey we would auto-connect with a key that
- * remains visible in a URL the embedder controls. So the apiKey is accepted
- * ONLY when supplied to the app's own URL, which can then be stripped. Embedders
- * should POST the key to /api/ei/session directly instead.
+ * The apiKey is a secret. If we accepted an inherited apiKey we would
+ * auto-connect with a key that remains visible in a URL the embedder controls.
+ * So the apiKey is accepted ONLY when supplied to the app's own URL. Embedders
+ * should POST the key to /api/ei/session directly instead when they do not want
+ * it in the iframe src.
  */
 const NON_INHERITABLE_KEYS = new Set(["apiKey"]);
 
@@ -232,28 +231,4 @@ export function getIframeQueryParams(): URLSearchParams {
 export function parseCurrentParams(): AppParams {
   if (typeof window === "undefined") return parseParams(undefined);
   return parseParams(getIframeQueryParams());
-}
-
-/**
- * Remove secret params (apiKey) from the address bar via history.replaceState,
- * so the key never lingers in history, bookmarks, or the referrer. No-op on the
- * server or when there is nothing to strip.
- */
-export function stripSecretParams(): void {
-  if (typeof window === "undefined") return;
-  try {
-    const url = new URL(window.location.href);
-    let changed = false;
-    for (const key of NON_INHERITABLE_KEYS) {
-      if (url.searchParams.has(key)) {
-        url.searchParams.delete(key);
-        changed = true;
-      }
-    }
-    if (changed) {
-      window.history.replaceState(window.history.state, "", url.toString());
-    }
-  } catch {
-    // Ignore — stripping is best-effort.
-  }
 }

@@ -14,7 +14,7 @@ import type {
   Theme,
   ViewMode,
 } from "@/lib/types";
-import { parseCurrentParams, stripSecretParams } from "@/lib/url-params";
+import { parseCurrentParams } from "@/lib/url-params";
 import * as ei from "@/lib/ei-client";
 import { parseCsvFile } from "@/lib/csv";
 import { buildFigure } from "@/lib/plotly-figure";
@@ -95,7 +95,6 @@ export function Dashboard() {
             studioHost: p.studioHost,
             ingestionHost: p.ingestionHost,
           });
-          stripSecretParams();
           if (res.success) {
             setConnected(true);
             setProjectName(res.projectName);
