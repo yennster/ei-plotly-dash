@@ -17,7 +17,7 @@ When opened from inside Edge Impulse Studio for a given sample, the extension:
    URL parameters — see [URL parameters](./url-parameters.md). The project is
    resolved automatically from the project-scoped API key.
 2. Validates the API key server-side and stores it in the httpOnly `ei_session`
-   cookie, then strips the key from the address bar.
+   cookie. If supplied as a URL parameter, the key remains in the iframe URL.
 3. Loads the sample's time-series through the same-origin proxy
    (`GET /api/ei/sample/{id}` → Edge Impulse `GET /{projectId}/raw-data/{id}`).
    Channel `i` is `payload.values.map(row => row[i])`, named from
@@ -48,7 +48,7 @@ https://dash.jennyspeelman.dev/?apiKey=<ei_…>&category=<training|testing|anoma
 
 | Part | Purpose |
 | --- | --- |
-| `apiKey=ei_…` | API key. Validated, moved into the `ei_session` cookie, then stripped from the URL. Optional once a session cookie already exists. The project is resolved from the key. |
+| `apiKey=ei_…` | API key. Validated, stored in the `ei_session` cookie, and left in the query string. Optional once a session cookie already exists. The project is resolved from the key. |
 | `category=…` | Dataset bucket the sample lives in. |
 | `sample=<id>` | Sample to auto-open (alias `sampleId`). |
 | `view=stacked\|overlay` | Optional figure layout (default `stacked`). |
@@ -56,7 +56,7 @@ https://dash.jennyspeelman.dev/?apiKey=<ei_…>&category=<training|testing|anoma
 | `rangeslider=0\|1` | Optional range slider toggle (default on). |
 | `embed=1` | Hide the page header for iframe embedding. |
 | `theme=dark\|light` | Optional — match Studio's theme. |
-| `studioHost` / `ingestionHost` | Optional — self-hosted / enterprise Edge Impulse instance. |
+| `studioHost` / `ingestionHost` | Optional — self-hosted / enterprise Edge Impulse origin with protocol, without API paths. |
 
 Once the session cookie is set, subsequent links can omit `apiKey`:
 

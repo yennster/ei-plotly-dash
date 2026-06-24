@@ -1,70 +1,59 @@
 // src/lib/ei-server.ts — SERVER-ONLY Edge Impulse helpers.
 //
-// All Studio calls flow through here so the API key never reaches client JS.
+// All Studio calls flow through here so client code never calls Studio directly
+// with the API key.
 // The session lives in the httpOnly `ei_session` cookie. This mirrors the proven
 // Edge Impulse CSV editor proxy architecture.
 
 import "server-only";
 import { cookies } from "next/headers";
 import type { EIEnvelope, EISession } from "@/lib/types";
-import { normalizeAllowedHost } from "@/lib/ei-host";
 
 /** Name of the httpOnly session cookie. */
 export const SESSION_COOKIE = "ei_session";
 
-/** Default Edge Impulse Studio API base. */
-export const DEFAULT_STUDIO_HOST = "https://studio.edgeimpulse.com/v1/api";
+/** Default Edge Impulse Studio origin. The API path is appended server-side. */
+export const DEFAULT_STUDIO_HOST = "https://studio.edgeimpulse.com";
 
-/** Default Edge Impulse Ingestion API base. */
-export const DEFAULT_INGESTION_HOST = "https://ingestion.edgeimpulse.com/api";
+/** Default Edge Impulse Ingestion origin. The API path is appended server-side. */
+export const DEFAULT_INGESTION_HOST = "https://ingestion.edgeimpulse.com";
 
-/**
- * Extra allowed hostnames for self-hosted / enterprise Edge Impulse instances,
- * configured server-side via EI_ALLOWED_HOSTS (comma-separated bare hostnames).
- * Never client-controllable.
- */
-function envAllowedHosts(): string[] {
-  const raw = process.env.EI_ALLOWED_HOSTS;
-  if (!raw) return [];
-  return raw
-    .split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-}
+const STUDIO_API_PATH = "/v1/api";
+const INGESTION_API_PATH = "/api";
 
-/**
- * Normalize + VALIDATE a host override against the allowlist (see
- * `@/lib/ei-host`). Returns undefined for any host that is not an https URL with
- * an allowlisted, non-private hostname, so callers fall back to the safe
- * default.
- *
- * SECURITY: these overrides are attacker-controllable (URL params, inherited
- * iframe params). Every Studio call attaches the secret x-api-key, so an
- * unvalidated host would let a malicious page exfiltrate the key or drive a
- * server-side request to internal/metadata endpoints (SSRF).
- */
+/** Normalize a host override to its origin; paths/query/hash are ignored. */
 export function normalizeHost(host: string | undefined | null): string | undefined {
-  return normalizeAllowedHost(host, envAllowedHosts());
+  if (!host) return undefined;
+  const trimmed = host.trim();
+  if (!trimmed) return undefined;
+
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return undefined;
+    return url.origin;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Resolve the Studio base URL for a session (with env + per-session override). */
 export function studioBase(session?: Pick<EISession, "studioHost"> | null): string {
-  return (
+  const origin =
     normalizeHost(session?.studioHost) ??
     normalizeHost(process.env.EI_STUDIO_HOST) ??
-    DEFAULT_STUDIO_HOST
-  );
+    DEFAULT_STUDIO_HOST;
+  return `${origin}${STUDIO_API_PATH}`;
 }
 
 /** Resolve the Ingestion base URL for a session (with env + per-session override). */
 export function ingestionBase(
   session?: Pick<EISession, "ingestionHost"> | null,
 ): string {
-  return (
+  const origin =
     normalizeHost(session?.ingestionHost) ??
     normalizeHost(process.env.EI_INGESTION_HOST) ??
-    DEFAULT_INGESTION_HOST
-  );
+    DEFAULT_INGESTION_HOST;
+  return `${origin}${INGESTION_API_PATH}`;
 }
 
 /** Serialize a session for storage in the cookie value. */

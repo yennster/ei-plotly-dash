@@ -134,7 +134,7 @@ export interface EISampleResponse extends EIEnvelope {
 // ---- URL params (parsed once at load, never throws) ----
 
 export interface AppParams {
-  apiKey?: string; // matches /^ei_/, moved to cookie then stripped from URL
+  apiKey?: string; // matches /^ei_/, stored in the session cookie
   category?: EICategory;
   labels?: string[]; // comma list
   sample?: number; // alias sampleId, int >= 1 — auto-open on load

@@ -43,9 +43,8 @@ are the **optional** Edge Impulse host overrides (see `.env.example`):
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `EI_STUDIO_HOST` | `https://studio.edgeimpulse.com/v1/api` | Default Studio API base. |
-| `EI_INGESTION_HOST` | `https://ingestion.edgeimpulse.com/api` | Default Ingestion API base. |
-| `EI_ALLOWED_HOSTS` | — | Comma-separated extra hostnames to allow for self-hosted / enterprise Edge Impulse. |
+| `EI_STUDIO_HOST` | `https://studio.edgeimpulse.com` | Default Studio origin; the app appends `/v1/api`. |
+| `EI_INGESTION_HOST` | `https://ingestion.edgeimpulse.com` | Default Ingestion origin; the app appends `/api`. |
 
 Set these in **Project → Settings → Environment Variables** only if you target a
 self-hosted / enterprise Edge Impulse instance. Per-session overrides

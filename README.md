@@ -59,7 +59,7 @@ at [`/url-parameters`](https://dash.jennyspeelman.dev/url-parameters) and in
 
 | Parameter | Type | Default | Purpose |
 | --- | --- | --- | --- |
-| `apiKey` | `ei_…` | — | API key (project-scoped). Validated, moved to the httpOnly cookie, then **stripped from the URL**. The project is resolved from the key. |
+| `apiKey` | `ei_…` | — | API key (project-scoped). Validated, stored in the httpOnly cookie, and left in the query string. The project is resolved from the key. |
 | `category` | enum | `training` | `training` \| `testing` \| `anomaly`. |
 | `labels` | comma list | — | Filter the sample list, e.g. `idle,walk,run`. |
 | `sample` / `sampleId` | int | — | Sample id to auto-open on load. |
@@ -70,7 +70,7 @@ at [`/url-parameters`](https://dash.jennyspeelman.dev/url-parameters) and in
 | `maxPoints` / `points` | int | `8000` | Per-sample payload cap; larger samples are downsampled server-side. |
 | `theme` | enum | `light` | `light` \| `dark`. |
 | `embed` | bool | `false` | Hide the page header for iframe embedding. |
-| `studioHost` / `ingestionHost` | URL | EI cloud | Self-hosted / enterprise API bases (host-allowlisted). |
+| `studioHost` / `ingestionHost` | URL | EI cloud origins | Self-hosted / enterprise origins with protocol, without API paths. |
 
 ```
 https://dash.jennyspeelman.dev/?apiKey=ei_…&category=training&sample=98765&view=stacked&embed=1&theme=dark
@@ -78,7 +78,7 @@ https://dash.jennyspeelman.dev/?apiKey=ei_…&category=training&sample=98765&vie
 
 When embedded in an iframe, parameters are also inherited from the parent frame
 (own-window values win) — except the secret `apiKey`, which is only ever read
-from the app's own URL so it can be stripped after load.
+from the app's own URL.
 
 ---
 
@@ -105,14 +105,14 @@ The API key is treated as a secret end-to-end:
 1. It is POSTed to `/api/ei/session`, validated against Studio, and stored only
    in an **httpOnly, secure, sameSite-none** `ei_session` cookie — never
    readable from client JS, never in localStorage.
-2. It is then removed from the address bar with `history.replaceState` before
-   the dashboard renders.
+2. If supplied as a URL parameter, it remains in the app's query string after
+   loading. It is never written to localStorage.
 3. Every Edge Impulse request goes through the same-origin `/api/ei/*` proxy,
    which reads the cookie server-side and attaches the key. The browser never
    sees it again.
-4. `studioHost` / `ingestionHost` overrides are **host-allowlisted** (https +
-   `edgeimpulse.com` or `EI_ALLOWED_HOSTS`, no private/loopback addresses) so a
-   crafted URL cannot exfiltrate the key or drive an SSRF.
+4. `studioHost` / `ingestionHost` overrides are parsed as origins only; paths,
+   query strings, and hashes are ignored before the app appends the fixed API
+   path.
 
 ---
 

@@ -21,7 +21,7 @@ const PARAMS: Param[] = [
     name: "apiKey",
     type: "string ei_…",
     def: "—",
-    desc: "Edge Impulse API key. Validated, moved into the httpOnly ei_session cookie, then stripped from the URL. Only accepted when it starts with ei_.",
+    desc: "Edge Impulse API key. Validated, stored in the httpOnly ei_session cookie, and left in the query string. Only accepted when it starts with ei_.",
   },
   {
     name: "category",
@@ -88,14 +88,14 @@ const PARAMS: Param[] = [
   {
     name: "studioHost",
     type: "URL",
-    def: "studio.edgeimpulse.com",
-    desc: "Override the Studio API base URL. Must be an https URL whose host is edgeimpulse.com (or an allowlisted self-hosted host).",
+    def: "https://studio.edgeimpulse.com",
+    desc: "Override the Studio origin. Include the protocol, e.g. https://studio.edgeimpulse.com or, in local development, http://localhost:4800. Do not include /v1/api.",
   },
   {
     name: "ingestionHost",
     type: "URL",
-    def: "ingestion.edgeimpulse.com",
-    desc: "Override the Ingestion API base URL, under the same host allowlist as studioHost.",
+    def: "https://ingestion.edgeimpulse.com",
+    desc: "Override the Ingestion origin. Include the protocol and do not include the /api path.",
   },
 ];
 
@@ -105,7 +105,7 @@ const EXAMPLES: { label: string; url: string }[] = [
     url: "/?category=training&sample=98765",
   },
   {
-    label: "Connect with an API key (stripped from the URL after load)",
+    label: "Connect with an API key",
     url: "/?apiKey=ei_xxxxxxxxxxxx&sample=98765",
   },
   {
@@ -207,7 +207,7 @@ export default function UrlParametersPage() {
 
         <section className="mt-12">
           <h2 className="text-xl font-semibold tracking-tight">
-            The API key never stays in the URL
+            API key handling
           </h2>
           <ol className="mt-4 max-w-2xl list-decimal space-y-2 pl-5 text-[15px] leading-relaxed text-fg-muted marker:text-fg-muted">
             <li>
@@ -218,23 +218,23 @@ export default function UrlParametersPage() {
               , where the server validates it against Edge Impulse Studio.
             </li>
             <li>
-              On success it is stored only in an httpOnly, secure, sameSite-none{" "}
+              On success it is stored in an httpOnly, secure, sameSite-none{" "}
               <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-[13px] text-fg">
                 ei_session
               </code>{" "}
-              cookie, never readable from client JavaScript and never written to
-              localStorage.
+              cookie and never written to localStorage.
             </li>
             <li>
-              The key is then removed from the address bar with
-              history.replaceState before the dashboard renders, so it never
-              lingers in history, bookmarks, or the referrer.
+              If supplied as{" "}
+              <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-[13px] text-fg">
+                apiKey
+              </code>
+              , it remains in the app URL after loading.
             </li>
           </ol>
           <p className="mt-4 max-w-2xl text-sm text-fg-muted">
             Every subsequent request goes through the same-origin proxy routes,
-            which read the cookie server-side and attach the key. The browser
-            never sees it again.
+            which read the cookie server-side and attach the key.
           </p>
         </section>
       </main>
